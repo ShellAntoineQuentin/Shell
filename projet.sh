@@ -6,6 +6,9 @@ echo "pas de parametres"
 exit 1
 fi
 
+
+
+
 cherche () {
 #local tag=$1
 local rep=$1
