@@ -3,6 +3,62 @@
 max=$#
 test $max -eq 0 && echo "Il faut au moins un paramètre." && exit 1
 test ! -d ${!max} && echo "Le dernier paramètre doit être un dossier." && exit 2
+test $max -gt 5 && echo "Veuillez saisir au maximum 3 options et un répertoire." && exit 3
+
+#Affiche les fichiers d'un répertoire donné
+cherche () {
+total=""
+local rep=$1
+cpt=0
+for i in `find $rep`
+do
+if [ $i != $rep ]
+then
+newname=`echo $i | sed "s#"$rep/"##g"`
+total="$total""$newname;"
+cpt=$(expr $cpt + 1)
+fi
+done
+
+a=1
+while [ "$cpt" -ge "$a" ]
+do
+
+    b=$(expr $a + 1)
+    var=`echo "$total" | cut -d';' -f$a`
+    while [ "$cpt" -ge "$b" ]
+    do
+        var2=`echo "$total" | cut -d';' -f$b`
+
+        if [ "$var2" != "" ]
+        then
+
+            if [ "$var" \> "$var2" ]
+            then
+                var="$var2"
+            fi
+        fi
+        b=$(expr $b + 1)
+    done
+    total=`echo "$total" | sed "s/"$var\;"//g"`
+    total=";$total"
+    echo "$var"
+    a=$(expr $a + 1)
+done
+}
+
+#Compare deux chaine donne en parametre
+function compare(){
+test $# -ne 2 && echo "probleme de parametre dans fct compare" && exit 3
+ch1="$1"
+ch2="$2"
+if (test $ch1 \< $ch2)
+then
+echo "OK"
+else
+echo "KO"
+fi
+}
 
 #Verification des parametres entres pour le tri
 function parametre (){
@@ -47,9 +103,12 @@ function parametre (){
 						echo ""$opt" tri selon groupe du proprietaire"
 					fi
 				fi
-				
 			done
 		fi
+    else
+        echo "tri dans l'ordre croissant sans sous dossier"
+# NE PAS PRENDRE EN COMPTE LES SOUS DOSSIER
+        cherche ${!max}
 	fi
 	if [ ! -d "$1" ]
 	then
@@ -59,51 +118,8 @@ function parametre (){
 }
 parametre $@
 
-#Compare deux chaine donne en parametre
-function compare(){
-	test $# -ne 2 && echo "probleme de parametre dans fct compare" && exit 3
-	ch1="$1"
-	ch2="$2"
-	if (test $ch1 \< $ch2)
-	then
-		echo "OK"
-	else
-		echo "KO"
-	fi
-}
 
 
-cherche () {
-	total=""
-	#local tag=$1
-	local rep=$1
-	#cd ..
-	#local name=$3
-	#cd $rep
-	#if [ -f $name -a $tag = "-f" ]
-	#then
-	#    echo "trouver fichier /$rep/$name"
-	#    exit 1
-	#elif [ -d $name -a $tag = "-d" ]
-	#then
-	#    echo "trouver dossier /$rep/$name"
-	#    exit 1
-	#fi
 
-	for i in `find $rep`
-	do
-		if [ $i != $rep ]
-		then
-	#        local nrep="$rep/$i"
-		newname=`echo $i | sed "s#"$rep/"##g"`
-		total="$total""$newname;"
-	#        cherche $tag $nrep $name
-		fi
-	done
-	echo "$total" | cut -d';' -f1
-	var="$total" | cut -d';' -f1
-	test=`echo "$total" | sed "s/$var//"`
-	echo "$test"
-}
 
 #cherche $1
