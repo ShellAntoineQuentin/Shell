@@ -2,6 +2,8 @@
 #Projet Shell : Groupe ELSAESSER Quentin && LEFEVRE Antoine
 max=$#
 nbPara=$#
+
+#Test au lancement du programme
 test $max -eq 0 && echo "Il faut au moins un paramètre." && exit 1
 test ! -d ${!max} && echo "Le dernier paramètre doit être un dossier." && exit 2
 test $max -gt 5 && echo "Veuillez saisir au maximum 3 options et un répertoire." && exit 3
@@ -15,14 +17,18 @@ test $saveFin != "/" && saveRepertoire=`echo $saveRepertoire/`
 #Sauvegarde des options autre que −R et -d pour le cas d'une egalite lors du tri
 saveOption=""
 
+#Pour l'option croissant ou decroissant
 ordreDecroissant=0
+
+#Pour stocker la chaine triee
 chaineTriee=""
 
+#Cree la chaine sans l'option -R
 creeChaine () {
 	total=""
 	rep="$1"
 	
-	#Enleve le / a la fin s'il a ete mis par l'utilisateur
+	#Enleve le / a la fin du dossier en parametre s'il a ete mis par l'utilisateur
 	taille=`echo ${#rep}`
 	fin=`echo "$rep" | cut -c $taille`
 	test $fin == "/" && rep=`echo $rep | sed 's/\///'`
@@ -35,6 +41,7 @@ creeChaine () {
 		then
 			if test ! -d $i
 			then
+				#Enleve le dossier en parametre et le /
 				var=`echo $i | sed 's/'"$rep"'\///'`
 				total="$total""$var;"
 			fi
@@ -43,11 +50,12 @@ creeChaine () {
 	echo $total
 }
 
+#Cree la chaine pour l'option -R
 creeChaineRecursive () {
 	total=""
 	rep="$1"
 	
-	#Enleve le / a la fin s'il a ete mis par l'utilisateur
+	#Enleve le / a la fin du dossier en parametre s'il a ete mis par l'utilisateur
 	taille=`echo ${#rep}`
 	fin=`echo "$rep" | cut -c $taille`
 	test $fin == '/' && rep=`echo $rep | sed 's/\///'`
@@ -60,6 +68,7 @@ creeChaineRecursive () {
 		then
 			if test ! -d $i
 			then
+				#Enleve le dossier en parametre et le /
 				var=`echo $i | sed 's/'"$rep"'\///'`
 				total="$total""$var;"
 			fi
@@ -68,130 +77,136 @@ creeChaineRecursive () {
 	echo $total
 }
 
+#Compte le nombre de fois ou il y a un ; -> pour savoir combien de fichier on a
 nombreFichier () {
 	echo "$1" | grep -o ";" | wc -l
 }
 
+#Compte le nombre de fois ou il y a un / -> pour savoir combien de / on doit enlever pour avoir le nom du fichier
 nombreSousRep () {
 	t=`echo "$1" | grep -o "/" | wc -l`
 	t=`expr $t + 1`
 	echo "$t"
 }
 
+#Indique, selon l'option, se que l'on doit faire en cas d'egalite
 casEgalite () {
 	var="$saveOption"
 	tailleVar=${#var}
 	if [ $tailleVar -lt 3 ]
 	then
-		echo "Cas d'egalite non gere, pas assez de parametres"
-	fi
+		#Cas d'egalite non gere, pas assez de parametres"
+		echo "OK"
+	else
+		para1="$1"
+		para2="$2"
 	
-	para1="$1"
-	para2="$2"
-	
-	for i in $(seq 3 $tailleVar)
-	do
-		opt=`echo "$var" | cut -c $i`
-		if [ "$opt" != "-" ]
-		then
-			if [ "$opt" == "n" ]
+		for i in $(seq 3 $tailleVar)
+		do
+			opt=`echo "$var" | cut -c $i`
+			if [ "$opt" != "-" ]
 			then
-				if [ $ordreDecroissant -eq 0 ]
+				if [ "$opt" == "n" ]
 				then
-					#Ordre Croissant
-					ssRep=`nombreSousRep $para1`
-					if [ "$ssRep" -gt 1 ]
+					if [ $ordreDecroissant -eq 0 ]
 					then
-						para1=`echo $para1 | cut -d'/' -f$ssRep`
+						#Ordre Croissant
+						par1="$para1"
+						par2="$para2"
+						ssRep=`nombreSousRep "$par1"`
+						if [ "$ssRep" -gt 1 ]
+						then
+							par1=`echo "$par1" | cut -d'/' -f$ssRep`
+						fi
+						ssRep=`nombreSousRep "$par2"`
+						if [ "$ssRep" -gt 1 ]
+						then
+							par2=`echo "$par2" | cut -d'/' -f$ssRep`
+						fi
+						if [ "$par1" \< "$par2" ]
+						then
+							echo "OK"
+						elif [ "$par2" \< "$par1" ]
+						then
+							echo "KO"
+						fi
+					else
+						#Ordre Decroissant
+						if [ "$par2" \< "$par1" ]
+						then
+							echo "OK"
+						elif [ "$par1" \< "$par2" ]
+						then
+							echo "KO"
+						fi
 					fi
-					ssRep=`nombreSousRep $para2`
-					if [ "$ssRep" -gt 1 ]
-					then
-						para2=`echo $para2 | cut -d'/' -f$ssRep`
-					fi
-					if [ "$para1" \< "$para2" ]
-					then
-						echo "OK"
-					elif [ "$para2" \< "$para1" ]
-					then
-						echo "KO"
-					fi
-				else
-					#Ordre Decroissant
-					if [ "$para2" \< "$para1" ]
-					then
-						echo "OK"
-					elif [ "$para1" \< "$para2" ]
-					then
-						echo "KO"
-					fi
-				fi
-			elif [ "$opt" == "s" ]
-			then
-				taille1=`stat -c "%s" $para1`
-				taille2=`stat -c "%s" $para2`
-				if [ $ordreDecroissant -eq 0 ]
+				elif [ "$opt" == "s" ]
 				then
-					#Ordre Croissant
-					if [ "$taille2" -lt "$taille1" ]
+					taille1=`stat -c "%s" "$para1"`
+					taille2=`stat -c "%s" "$para2"`
+					if [ $ordreDecroissant -eq 0 ]
 					then
-						echo "OK"
-					elif [ "$taille1" -lt "$taille2" ]
-					then
-						echo "KO"
+						#Ordre Croissant
+						if [ "$taille2" -lt "$taille1" ]
+						then
+							echo "OK"
+						elif [ "$taille1" -lt "$taille2" ]
+						then
+							echo "KO"
+						fi
+					else
+						#Ordre Decroissant
+						if [ "$taille1" -lt "$taille2" ]
+						then
+							echo "OK"
+						elif [ "$taille2" -lt "$taille1" ]
+						then
+							echo "KO"
+						fi
 					fi
-				else
-					#Ordre Decroissant
-					if [ "$taille1" -lt "$taille2" ]
-					then
-						echo "OK"
-					elif [ "$taille2" -lt "$taille1" ]
-					then
-						echo "KO"
-					fi
-				fi
-			elif [ "$opt" == "m" ]
-			then
-				val="ligne a supprimer car sans ca fait erreur"
-			elif [ "$opt" == "l" ]
-			then
-				nbLigne1=`wc -l $para1 | cut -d' ' -f1`
-				nbLigne2=`wc -l $para2 | cut -d' ' -f1`
-				if [ $ordreDecroissant -eq 0 ]
+				elif [ "$opt" == "m" ]
 				then
-					#Ordre Croissant
-					if [ "$nbLigne2" -lt "$nbLigne1" ]
+					val="ligne a supprimer car sans ca fait erreur"
+				elif [ "$opt" == "l" ]
+				then
+					nbLigne1=`wc -l "$para1" | cut -d' ' -f1`
+					nbLigne2=`wc -l "$para2" | cut -d' ' -f1`
+					if [ "$ordreDecroissant" -eq 0 ]
 					then
-						echo "OK"
-					elif [ "$nbLigne1" -lt "$nbLigne2" ]
-					then
-						echo "KO"
+						#Ordre Croissant
+						if [ "$nbLigne2" -lt "$nbLigne1" ]
+						then
+							echo "OK"
+						elif [ "$nbLigne1" -lt "$nbLigne2" ]
+						then
+							echo "KO"
+						fi
+					else
+						#Ordre Decroissant
+						if [ "$nbLigne1" -lt "$nbLigne2" ]
+						then
+							echo "OK"
+						elif [ "$nbLigne2" -lt "$nbLigne1" ]
+						then
+							echo "KO"
+						fi
 					fi
-				else
-					#Ordre Decroissant
-					if [ "$nbLigne1" -lt "$nbLigne2" ]
-					then
-						echo "OK"
-					elif [ "$nbLigne2" -lt "$nbLigne1" ]
-					then
-						echo "KO"
-					fi
+				elif [ "$opt" == "e" ]
+				then
+					val="ligne a supprimer car sans ca fait erreur"
+				elif [ "$opt" == "t" ]
+				then
+					val="ligne a supprimer car sans ca fait erreur"
+				elif [ "$opt" == "p" ]
+				then
+					val="ligne a supprimer car sans ca fait erreur"
+				elif [ "$opt" == "g" ]
+				then
+					val="ligne a supprimer car sans ca fait erreur"
 				fi
-			elif [ "$opt" == "e" ]
-			then
-				val="ligne a supprimer car sans ca fait erreur"
-			elif [ "$opt" == "t" ]
-			then
-				val="ligne a supprimer car sans ca fait erreur"
-			elif [ "$opt" == "p" ]
-			then
-				val="ligne a supprimer car sans ca fait erreur"
-			elif [ "$opt" == "g" ]
-			then
-				val="ligne a supprimer car sans ca fait erreur"
 			fi
-		fi
-	done
+		done
+	fi
 }
 
 triSimple () {
@@ -200,7 +215,7 @@ triSimple () {
 	#Pour afficher la chaine de base a trier
 	#echo $total
 	
-	nbMots=`nombreFichier $total`
+	nbMots=`nombreFichier "$total"`
 	#indice du premier element a comparer
 	indP=1
 	#tmp pour stocker le fichier avec son chemin dans le cas ou l'option −R est choisi afin de l'enlever de la chaine totale
@@ -210,27 +225,27 @@ triSimple () {
 	while [ "$nbMots" -ge "$indP" ]
 	do
 		#Indice du second element
-		indD=`expr $indP + 1`
-		motP=`echo $total | cut -d';' -f$indP`
+		indD=`expr "$indP" + 1`
+		motP=`echo "$total" | cut -d';' -f$indP`
 		tmp="$motP"
 		
 		#Si c'est dans un sous dossier, on prend uniquement le nom du fichier pour la comparaison
-		ssRep=`nombreSousRep $motP`
+		ssRep=`nombreSousRep "$motP"`
 		if [ "$ssRep" -gt 1 ]
 		then
-			motP=`echo $motP | cut -d'/' -f$ssRep`
+			motP=`echo "$motP" | cut -d'/' -f$ssRep`
 		fi
 		
 		while [ "$nbMots" -ge "$indD" ]
 		do
-			motD=`echo $total | cut -d';' -f$indD`
+			motD=`echo "$total" | cut -d';' -f$indD`
 			tmp2="$motD"
 			
 			#Si c'est dans un sous dossier, on prend uniquement le nom du fichier pour la comparaison
 			ssRep=`nombreSousRep $motD`
 			if [ "$ssRep" -gt 1 ]
 			then
-				motD=`echo $motD | cut -d'/' -f$ssRep`
+				motD=`echo "$motD" | cut -d'/' -f$ssRep`
 			fi
 			
 			#Comparaison
@@ -253,16 +268,17 @@ triSimple () {
 					fi
 				fi
 			fi
-			indD=`expr $indD + 1`
+			indD=`expr "$indD" + 1`
 		done
-		
-		ssRep=`nombreSousRep $tmp`
+
+		#On ajoute des \ a cote des / quand il y a des sous dossiers pour ne pas avoir d'erreur sur le sed	
+		ssRep=`nombreSousRep "$tmp"`
 		if [ "$ssRep" -gt 1 ]
 		then
 			newch=""
 			for i in $(seq 1 ${#tmp})
 			do
-				c=`echo "$tmp" | cut -c $i`
+				c=`echo "$tmp" | cut -c "$i"`
 				if [ $c == "/" ]
 				then
 					newch="$newch"\\"$c"
@@ -270,13 +286,16 @@ triSimple () {
 					newch="$newch""$c"
 				fi
 			done
-			total=`echo $total | sed 's/'"$newch"';//'`
+			total=`echo "$total" | sed 's/'"$newch"';//'`
 		else
-			total=`echo $total | sed 's/'"$tmp"';//'`	
+			total=`echo "$total" | sed 's/'"$tmp"';//'`	
 		fi
+		
+		#On affiche l'element trie
 		echo "$tmp"
+		
 		indP=1
-		nbMots=`expr $nbMots - 1`
+		nbMots=`expr "$nbMots" - 1`
 	done
 }
 
@@ -286,7 +305,7 @@ triSelonTaille () {
 	#Pour afficher la chaine de base a trier
 	#echo $total
 	
-	nbMots=`nombreFichier $total`
+	nbMots=`nombreFichier "$total"`
 	#indice du premier element a comparer
 	indP=1
 	#tmp pour stocker le fichier avec son chemin dans le cas ou l'option −R est choisi afin de l'enlever de la chaine totale
@@ -300,40 +319,45 @@ triSelonTaille () {
 	while [ "$nbMots" -ge "$indP" ]
 	do
 		#Indice du second element
-		indD=`expr $indP + 1`
-		motP=`echo $total | cut -d';' -f$indP`
+		indD=`expr "$indP" + 1`
+		motP=`echo "$total" | cut -d';' -f$indP`
 		savePara1="$saveRepertoire""$motP"
-		taille1=`stat -c "%s" $savePara1`
+		taille1=`stat -c "%s" "$savePara1"`
 		tmp="$motP"
-		
-		#Si c'est dans un sous dossier, on prend uniquement le nom du fichier pour la comparaison
-		ssRep=`nombreSousRep $motP`
-		if [ "$ssRep" -gt 1 ]
-		then
-			motP=`echo $motP | cut -d'/' -f$ssRep`
-		fi
 		
 		while [ "$nbMots" -ge "$indD" ]
 		do
-			motD=`echo $total | cut -d';' -f$indD`
+			motD=`echo "$total" | cut -d';' -f$indD`
 			savePara2="$saveRepertoire""$motD"
-			taille2=`stat -c "%s" $savePara2`
+			taille2=`stat -c "%s" "$savePara2"`
 			tmp2="$motD"
-			
-			#Si c'est dans un sous dossier, on prend uniquement le nom du fichier pour la comparaison
-			ssRep=`nombreSousRep $motD`
-			if [ "$ssRep" -gt 1 ]
-			then
-				motD=`echo $motD | cut -d'/' -f$ssRep`
-			fi
 			
 			#Comparaison
 			if [ "$motD" != "" ]
 			then
-				if [ $ordreDecroissant -eq 0 ]
+				if [ "$ordreDecroissant" -eq 0 ]
 				then
 					#Ordre Croissant
 					if [ "$taille2" -lt "$taille1" ]
+					then
+						motP="$motD"
+						tmp="$tmp2"
+						taille1="$taille2"
+						savePara1="$saveRepertoire""$motP"
+					elif [ "$taille2" -eq "$taille1" ]
+					then
+						equal=`casEgalite "$savePara1" "$savePara2"`				
+						if [ "$equal" == "KO" ]
+						then
+							motP="$motD"
+							tmp="$tmp2"
+							taille1="$taille2"
+							savePara1="$saveRepertoire""$motP"
+						fi
+					fi
+				else
+					#Ordre Decroissant
+					if [ "$taille1" -lt "$taille2" ]
 					then
 						motP="$motD"
 						tmp="$tmp2"
@@ -350,29 +374,13 @@ triSelonTaille () {
 							savePara1="$saveRepertoire""$motP"
 						fi
 					fi
-				else
-					#Ordre Decroissant
-					if [ "$taille1" -lt "$taille2" ]
-					then
-						motP="$motD"
-						tmp="$tmp2"
-						taille1=$taille2
-					elif [ "$taille2" == "$taille1" ]
-					then
-						equal=`casEgalite "$savePara1" "$savePara2"`
-						if [ $equal == "KO" ]
-						then
-							motP="$motD"
-							tmp="$tmp2"
-							taille1=$taille2
-						fi
-					fi
 				fi
 			fi
-			indD=`expr $indD + 1`
+			indD=`expr "$indD" + 1`
 		done
 		
-		ssRep=`nombreSousRep $tmp`
+		#On ajoute des \ a cote des / quand il y a des sous dossiers pour ne pas avoir d'erreur sur le sed
+		ssRep=`nombreSousRep "$tmp"`
 		if [ "$ssRep" -gt 1 ]
 		then
 			newch=""
@@ -386,13 +394,16 @@ triSelonTaille () {
 					newch="$newch""$c"
 				fi
 			done
-			total=`echo $total | sed 's/'"$newch"';//'`
+			total=`echo "$total" | sed 's/'"$newch"';//'`
 		else
-			total=`echo $total | sed 's/'"$tmp"';//'`	
+			total=`echo "$total" | sed 's/'"$tmp"';//'`	
 		fi
+		
+		#On affiche l'element trie
 		echo "$tmp"
+		
 		indP=1
-		nbMots=`expr $nbMots - 1`
+		nbMots=`expr "$nbMots" - 1`
 	done
 }
 
@@ -402,7 +413,7 @@ triSelonNbLigne () {
 	#Pour afficher la chaine de base a trier
 	#echo $total
 	
-	nbMots=`nombreFichier $total`
+	nbMots=`nombreFichier "$total"`
 	#indice du premier element a comparer
 	indP=1
 	#tmp pour stocker le fichier avec son chemin dans le cas ou l'option −R est choisi afin de l'enlever de la chaine totale
@@ -416,37 +427,23 @@ triSelonNbLigne () {
 	while [ "$nbMots" -ge "$indP" ]
 	do
 		#Indice du second element
-		indD=`expr $indP + 1`
-		motP=`echo $total | cut -d';' -f$indP`
+		indD=`expr "$indP" + 1`
+		motP=`echo "$total" | cut -d';' -f$indP`
 		savePara1="$saveRepertoire""$motP"
-		nbLigne1=`wc -l $savePara1 | cut -d' ' -f1`
+		nbLigne1=`wc -l "$savePara1" | cut -d' ' -f1`
 		tmp="$motP"
-		
-		#Si c'est dans un sous dossier, on prend uniquement le nom du fichier pour la comparaison
-		ssRep=`nombreSousRep $motP`
-		if [ "$ssRep" -gt 1 ]
-		then
-			motP=`echo $motP | cut -d'/' -f$ssRep`
-		fi
 		
 		while [ "$nbMots" -ge "$indD" ]
 		do
-			motD=`echo $total | cut -d';' -f$indD`
+			motD=`echo "$total" | cut -d';' -f$indD`
 			savePara2="$saveRepertoire""$motD"
-			nbLigne2=`wc -l $savePara2 | cut -d' ' -f1`
+			nbLigne2=`wc -l "$savePara2" | cut -d' ' -f1`
 			tmp2="$motD"
-			
-			#Si c'est dans un sous dossier, on prend uniquement le nom du fichier pour la comparaison
-			ssRep=`nombreSousRep $motD`
-			if [ "$ssRep" -gt 1 ]
-			then
-				motD=`echo $motD | cut -d'/' -f$ssRep`
-			fi
 			
 			#Comparaison
 			if [ "$motD" != "" ]
 			then
-				if [ $ordreDecroissant -eq 0 ]
+				if [ "$ordreDecroissant" -eq 0 ]
 				then
 					#Ordre Croissant
 					if [ "$nbLigne2" -lt "$nbLigne1" ]
@@ -458,6 +455,10 @@ triSelonNbLigne () {
 					elif [ "$nbLigne2" -eq "$nbLigne1" ]
 					then
 						equal=`casEgalite "$savePara1" "$savePara2"`
+						
+#echo "$equal" "$savePara1" "$savePara2"
+												
+												
 						if [ "$equal" == "KO" ]
 						then
 							motP="$motD"
@@ -473,10 +474,10 @@ triSelonNbLigne () {
 						motP="$motD"
 						tmp="$tmp2"
 						nbLigne1=$nbLigne2
-					elif [ "$nbLigne2" == "$nbLigne1" ]
+					elif [ "$nbLigne2" -eq "$nbLigne1" ]
 					then
 						equal=`casEgalite "$savePara1" "$savePara2"`
-						if [ $equal == "KO" ]
+						if [ "$equal" == "KO" ]
 						then
 							motP="$motD"
 							tmp="$tmp2"
@@ -485,39 +486,43 @@ triSelonNbLigne () {
 					fi
 				fi
 			fi
-			indD=`expr $indD + 1`
+			indD=`expr "$indD" + 1`
 		done
 		
-		ssRep=`nombreSousRep $tmp`
+		#On ajoute des \ a cote des / quand il y a des sous dossiers pour ne pas avoir d'erreur sur le sed
+		ssRep=`nombreSousRep "$tmp"`
 		if [ "$ssRep" -gt 1 ]
 		then
 			newch=""
 			for i in $(seq 1 ${#tmp})
 			do
-				c=`echo "$tmp" | cut -c $i`
-				if [ $c == "/" ]
+				c=`echo "$tmp" | cut -c "$i"`
+				if [ "$c" == "/" ]
 				then
 					newch="$newch"\\"$c"
 				else
 					newch="$newch""$c"
 				fi
 			done
-			total=`echo $total | sed 's/'"$newch"';//'`
+			total=`echo "$total" | sed 's/'"$newch"';//'`
 		else
-			total=`echo $total | sed 's/'"$tmp"';//'`	
+			total=`echo "$total" | sed 's/'"$tmp"';//'`	
 		fi
+
+		#On affiche l'element trie
 		echo "$tmp"
+
 		indP=1
-		nbMots=`expr $nbMots - 1`
+		nbMots=`expr "$nbMots" - 1`
 	done
 }
 
 #Verification des parametres entres pour le tri
 function parametre (){
-	if [ $nbPara -eq 1 ]
+	if [ "$nbPara" -eq 1 ]
 	then
         echo "tri dans l'ordre croissant sans sous dossier"
-        chaineTriee=`triSimple $chaine`
+        chaineTriee=`triSimple "$chaine"`
 	fi
 	
 	if [ ! -d "$1" ]
@@ -525,12 +530,12 @@ function parametre (){
 		if [ "$1" == "-R" ]
 		then
 			chaine=`creeChaineRecursive ${!max}`
-			chaineTriee=`triSimple $chaine`
+			chaineTriee=`triSimple "$chaine"`
 			echo ""$1" tri avec chemin d'accès"
 		elif [ "$1" == "-d" ]
 		then
 			ordreDecroissant=1
-	        chaineTriee=`triSimple $chaine`
+	        chaineTriee=`triSimple "$chaine"`
 			echo ""$1" tri ordre decroissant"
 		else
 			var="$1"
@@ -540,7 +545,7 @@ function parametre (){
 			if [ $var == "-n" ]
 			then
 				echo "n tri selon nom entree"
-		        chaineTriee=`triSimple $chaine`
+		        chaineTriee=`triSimple "$chaine"`
 			fi
 			
 			for i in $(seq 1 ${#var})
@@ -553,14 +558,14 @@ function parametre (){
 						echo ""$opt" tri selon nom entree"
 					elif [ "$opt" == "s" ]
 					then
-				        chaineTriee=`triSelonTaille $chaine`
+				        chaineTriee=`triSelonTaille "$chaine"`
 						echo ""$opt" tri selon taille entree"
 					elif [ "$opt" == "m" ]
 					then
 						echo ""$opt" tri selon date derniere modif"
 					elif [ "$opt" == "l" ]
 					then
-						chaineTriee=`triSelonNbLigne $chaine`
+						chaineTriee=`triSelonNbLigne "$chaine"`
 						echo ""$opt" tri selon nombre de ligne"
 					elif [ "$opt" == "e" ]
 					then
