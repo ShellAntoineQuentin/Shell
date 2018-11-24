@@ -454,11 +454,7 @@ triSelonNbLigne () {
 						savePara1="$saveRepertoire""$motP"
 					elif [ "$nbLigne2" -eq "$nbLigne1" ]
 					then
-						equal=`casEgalite "$savePara1" "$savePara2"`
-						
-#echo "$equal" "$savePara1" "$savePara2"
-												
-												
+						equal=`casEgalite "$savePara1" "$savePara2"`		
 						if [ "$equal" == "KO" ]
 						then
 							motP="$motD"
@@ -555,6 +551,7 @@ function parametre (){
 				then
 					if [ "$opt" == "n" ]
 					then
+				        chaineTriee=`triSimple "$chaine"`
 						echo ""$opt" tri selon nom entree"
 					elif [ "$opt" == "s" ]
 					then
