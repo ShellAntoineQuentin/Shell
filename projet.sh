@@ -6,12 +6,17 @@ test $max -eq 0 && echo "Il faut au moins un paramètre." && exit 1
 test ! -d ${!max} && echo "Le dernier paramètre doit être un dossier." && exit 2
 test $max -gt 5 && echo "Veuillez saisir au maximum 3 options et un répertoire." && exit 3
 
+saveRepertoire=${!max}
+saveTaille=`echo ${#saveRepertoire}`
+saveFin=`echo "$saveRepertoire" | cut -c $saveTaille`
+test $saveFin != "/" && saveRepertoire=`echo $saveRepertoire/`
+
 ordreDecroissant=0
 chaineTriee=""
 
 creeChaine () {
 	total=""
-	rep=$1
+	rep="$1"
 	
 	#Enleve le / a la fin s'il a ete mis par l'utilisateur
 	taille=`echo ${#rep}`
@@ -36,7 +41,7 @@ creeChaine () {
 
 creeChaineRecursive () {
 	total=""
-	rep=$1
+	rep="$1"
 	
 	#Enleve le / a la fin s'il a ete mis par l'utilisateur
 	taille=`echo ${#rep}`
@@ -70,8 +75,11 @@ nombreSousRep () {
 }
 
 triSimple () {
-	total=$1
-	echo $total
+	total="$1"
+	
+	#Pour afficher la chaine de base a trier
+	#echo $total
+	
 	nbMots=`nombreFichier $total`
 	#indice du premier element a comparer
 	indP=1
@@ -152,6 +160,99 @@ triSimple () {
 	done
 }
 
+triSelonTaille () {
+	total="$1"
+	
+	#Pour afficher la chaine de base a trier
+	#echo $total
+	
+	nbMots=`nombreFichier $total`
+	#indice du premier element a comparer
+	indP=1
+	#tmp pour stocker le fichier avec son chemin dans le cas ou l'option −R est choisi afin de l'enlever de la chaine totale
+	tmp=""
+	tmp2=""
+	taille1=0
+	taille2=0
+	
+	while [ "$nbMots" -ge "$indP" ]
+	do
+		#Indice du second element
+		indD=`expr $indP + 1`
+		motP=`echo $total | cut -d';' -f$indP`
+		taille1=`stat -c "%s" "$saveRepertoire""$motP"`
+		tmp="$motP"
+		
+		#Si c'est dans un sous dossier, on prend uniquement le nom du fichier pour la comparaison
+		ssRep=`nombreSousRep $motP`
+		if [ "$ssRep" -gt 1 ]
+		then
+			motP=`echo $motP | cut -d'/' -f$ssRep`
+		fi
+		
+		while [ "$nbMots" -ge "$indD" ]
+		do
+			motD=`echo $total | cut -d';' -f$indD`
+			taille2=`stat -c "%s" "$saveRepertoire""$motD"`
+			tmp2="$motD"
+			
+			#Si c'est dans un sous dossier, on prend uniquement le nom du fichier pour la comparaison
+			ssRep=`nombreSousRep $motD`
+			if [ "$ssRep" -gt 1 ]
+			then
+				motD=`echo $motD | cut -d'/' -f$ssRep`
+			fi
+			
+			#Comparaison
+			if [ "$motD" != "" ]
+			then
+				if [ $ordreDecroissant -eq 0 ]
+				then
+					#Ordre Croissant
+					if [ "$taille2" \< "$taille1" ]
+					then
+						motP="$motD"
+						tmp="$tmp2"
+						taille1=$taille2
+					fi
+				else
+					#Ordre Decroissant
+					if [ "$taille1" \< "$taille2" ]
+					then
+						motP="$motD"
+						tmp="$tmp2"
+						taille1=$taille2
+					fi
+				fi
+			fi
+			indD=`expr $indD + 1`
+		done
+		
+		ssRep=`nombreSousRep $tmp`
+		if [ "$ssRep" -gt 1 ]
+		then
+			newch=""
+			for i in $(seq 1 ${#tmp})
+			do
+				c=`echo "$tmp" | cut -c $i`
+				if [ $c == "/" ]
+				then
+					newch="$newch"\\"$c"
+				else
+					newch="$newch""$c"
+				fi
+			done
+			total=`echo $total | sed 's/'"$newch"';//'`
+		else
+			total=`echo $total | sed 's/'"$tmp"';//'`	
+		fi
+		echo "$tmp"
+		indP=1
+		nbMots=`expr $nbMots - 1`
+	done
+}
+
+
 #Verification des parametres entres pour le tri
 function parametre (){
 	if [ $nbPara -eq 1 ]
@@ -174,6 +275,14 @@ function parametre (){
 			echo ""$1" tri ordre decroissant"
 		else
 			var="$1"
+			
+			#Option special pour le -n car il n'est pas reconnu dans mon terminal s'il est seul
+			if [ $var == "-n" ]
+			then
+				echo "n tri selon nom entree"
+		        chaineTriee=`triSimple $chaine`
+			fi
+			
 			for i in $(seq 1 ${#var})
 			do
 				opt=`echo "$var" | cut -c $i`
@@ -184,6 +293,7 @@ function parametre (){
 						echo ""$opt" tri selon nom entree"
 					elif [ "$opt" == "s" ]
 					then
+				        chaineTriee=`triSelonTaille $chaine`
 						echo ""$opt" tri selon taille entree"
 					elif [ "$opt" == "m" ]
 					then
@@ -213,6 +323,9 @@ function parametre (){
 	fi
 }
 
+#"Main du programme"
+#On cree la chaine de base, sans option puis on lance le programme qui va modifier la chaine finale selon les options
 chaine=`creeChaine ${!max}`
 parametre $@
+#On affiche le resultat
 echo "$chaineTriee"
