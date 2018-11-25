@@ -400,6 +400,196 @@ triSelonExtension () {
 	done
 }
 
+triSelonProprio () {
+	total="$1"
+	
+	#Pour afficher la chaine de base a trier
+	#echo $total
+	
+	nbMots=`nombreFichier "$total"`
+	#indice du premier element a comparer
+	indP=1
+	#tmp pour stocker le fichier avec son chemin dans le cas ou l'option −R est choisi afin de l'enlever de la chaine totale
+	tmp=""
+	tmp2=""
+	while [ "$nbMots" -ge "$indP" ]
+	do
+		#Indice du second element
+		indD=`expr "$indP" + 1`
+		motP=`echo "$total" | cut -d';' -f$indP`
+		tmp="$motP"
+		
+		#Si c'est dans un sous dossier, on prend uniquement le nom du fichier pour la comparaison
+		ssRep=`nombreSousRep "$motP"`
+		if [ "$ssRep" -gt 1 ]
+		then
+			nomProprioP=`stat -c "%U" "$motP"`
+			motP=`echo "$motP" | cut -d'/' -f$ssRep`
+		else
+			nomProprioP=`stat -c "%U" "$motP"`
+		fi
+		
+		while [ "$nbMots" -ge "$indD" ]
+		do
+			motD=`echo "$total" | cut -d';' -f$indD`
+			tmp2="$motD"
+			
+			#Si c'est dans un sous dossier, on prend uniquement le nom du fichier pour la comparaison
+			ssRep=`nombreSousRep $motD`
+			if [ "$ssRep" -gt 1 ]
+			then
+				nomProprioD=`stat -c "%U" "$motD"`
+				motD=`echo "$motD" | cut -d'/' -f$ssRep`
+			else
+				nomProprioD=`stat -c "%U" "$motD"`
+			fi
+			
+			#Comparaison
+			if [ "$motD" != "" ]
+			then
+				if [ "$ordreDecroissant" -eq 0 ]
+				then
+					#Ordre Croissant
+					if [ "$nomProprioD" \< "$nomProprioP" ]
+					then
+						motP="$motD"
+						tmp="$tmp2"
+					fi
+				else
+					#Ordre Decroissant
+					if [ "$nomProprioP" \< "$nomProprioD" ]
+					then
+						motP="$motD"
+						tmp="$tmp2"
+					fi
+				fi
+			fi
+			indD=`expr "$indD" + 1`
+		done
+
+		#On ajoute des \ a cote des / quand il y a des sous dossiers pour ne pas avoir d'erreur sur le sed	
+		ssRep=`nombreSousRep "$tmp"`
+		if [ "$ssRep" -gt 1 ]
+		then
+			newch=""
+			for i in $(seq 1 ${#tmp})
+			do
+				c=`echo "$tmp" | cut -c "$i"`
+				if [ $c == "/" ]
+				then
+					newch="$newch"\\"$c"
+				else
+					newch="$newch""$c"
+				fi
+			done
+			total=`echo "$total" | sed 's/'"$newch"';//'`
+		else
+			total=`echo "$total" | sed 's/'"$tmp"';//'`	
+		fi
+		
+		#On affiche l'element trie
+		echo "$tmp"
+		
+		indP=1
+		nbMots=`expr "$nbMots" - 1`
+	done
+}
+
+triSelonGroupProprio () {
+	total="$1"
+	
+	#Pour afficher la chaine de base a trier
+	#echo $total
+	
+	nbMots=`nombreFichier "$total"`
+	#indice du premier element a comparer
+	indP=1
+	#tmp pour stocker le fichier avec son chemin dans le cas ou l'option −R est choisi afin de l'enlever de la chaine totale
+	tmp=""
+	tmp2=""
+	while [ "$nbMots" -ge "$indP" ]
+	do
+		#Indice du second element
+		indD=`expr "$indP" + 1`
+		motP=`echo "$total" | cut -d';' -f$indP`
+		tmp="$motP"
+		
+		#Si c'est dans un sous dossier, on prend uniquement le nom du fichier pour la comparaison
+		ssRep=`nombreSousRep "$motP"`
+		if [ "$ssRep" -gt 1 ]
+		then
+			nomGroupProprioP=`stat -c "%G" "$motP"`
+			motP=`echo "$motP" | cut -d'/' -f$ssRep`
+		else
+			nomGroupProprioP=`stat -c "%G" "$motP"`
+		fi
+		
+		while [ "$nbMots" -ge "$indD" ]
+		do
+			motD=`echo "$total" | cut -d';' -f$indD`
+			tmp2="$motD"
+			
+			#Si c'est dans un sous dossier, on prend uniquement le nom du fichier pour la comparaison
+			ssRep=`nombreSousRep $motD`
+			if [ "$ssRep" -gt 1 ]
+			then
+				nomGroupProprioD=`stat -c "%G" "$motD"`
+				motD=`echo "$motD" | cut -d'/' -f$ssRep`
+			else
+				nomGroupProprioD=`stat -c "%G" "$motD"`
+			fi
+			
+			#Comparaison
+			if [ "$motD" != "" ]
+			then
+				if [ "$ordreDecroissant" -eq 0 ]
+				then
+					#Ordre Croissant
+					if [ "$nomGroupProprioD" \< "$nomGroupProprioP" ]
+					then
+						motP="$motD"
+						tmp="$tmp2"
+					fi
+				else
+					#Ordre Decroissant
+					if [ "$nomGroupProprioP" \< "$nomGroupProprioD" ]
+					then
+						motP="$motD"
+						tmp="$tmp2"
+					fi
+				fi
+			fi
+			indD=`expr "$indD" + 1`
+		done
+
+		#On ajoute des \ a cote des / quand il y a des sous dossiers pour ne pas avoir d'erreur sur le sed	
+		ssRep=`nombreSousRep "$tmp"`
+		if [ "$ssRep" -gt 1 ]
+		then
+			newch=""
+			for i in $(seq 1 ${#tmp})
+			do
+				c=`echo "$tmp" | cut -c "$i"`
+				if [ $c == "/" ]
+				then
+					newch="$newch"\\"$c"
+				else
+					newch="$newch""$c"
+				fi
+			done
+			total=`echo "$total" | sed 's/'"$newch"';//'`
+		else
+			total=`echo "$total" | sed 's/'"$tmp"';//'`	
+		fi
+		
+		#On affiche l'element trie
+		echo "$tmp"
+		
+		indP=1
+		nbMots=`expr "$nbMots" - 1`
+	done
+}
+
 triSelonTaille () {
 	total="$1"
 	
@@ -791,9 +981,11 @@ function parametre (){
 						echo ""$opt" tri selon type fichier"
 					elif [ "$opt" == "p" ]
 					then
+						chaineTriee=`triSelonProprio "$chaine"`
 						echo ""$opt" tri selon nom proprietaire fichier"
 					elif [ "$opt" == "g" ]
 					then
+						chaineTriee=`triSelonGroupProprio "$chaine"`
 						echo ""$opt" tri selon groupe du proprietaire"
 					fi
 				fi
