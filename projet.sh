@@ -299,6 +299,107 @@ triSimple () {
 	done
 }
 
+triSelonExtension () {
+	total="$1"
+	
+	#Pour afficher la chaine de base a trier
+	#echo $total
+	
+	nbMots=`nombreFichier "$total"`
+	#indice du premier element a comparer
+	indP=1
+	#tmp pour stocker le fichier avec son chemin dans le cas ou l'option −R est choisi afin de l'enlever de la chaine totale
+	tmp=""
+	tmp2=""
+	while [ "$nbMots" -ge "$indP" ]
+	do
+		#Indice du second element
+		indD=`expr "$indP" + 1`
+		motP=`echo "$total" | cut -d';' -f$indP`
+		tmp="$motP"
+		
+		#Si c'est dans un sous dossier, on prend uniquement le nom du fichier pour la comparaison
+		ssRep=`nombreSousRep "$motP"`
+		if [ "$ssRep" -gt 1 ]
+		then
+			motP=`echo "$motP" | cut -d'/' -f$ssRep`
+		fi
+		
+		while [ "$nbMots" -ge "$indD" ]
+		do
+			motD=`echo "$total" | cut -d';' -f$indD`
+			tmp2="$motD"
+			
+			#Si c'est dans un sous dossier, on prend uniquement le nom du fichier pour la comparaison
+			ssRep=`nombreSousRep $motD`
+			if [ "$ssRep" -gt 1 ]
+			then
+				motD=`echo "$motD" | cut -d'/' -f$ssRep`
+			fi
+			
+			#Comparaison
+			if [ "$motD" != "" ]
+			then
+				if [[ "$motD" =~ "." ]]
+					then
+						extMotD=`echo "$motD" | sed 's/.*\.//'`
+					else
+						extMotD=""
+					fi
+					if [[ "$motP" =~ "." ]]
+					then
+						extMotP=`echo "$motP" | sed 's/.*\.//'`
+					else
+						extMotP=""
+					fi
+				if [ "$ordreDecroissant" -eq 0 ]
+				then
+					#Ordre Croissant
+					if [ "$extMotD" \< "$extMotP" ]
+					then
+						motP="$motD"
+						tmp="$tmp2"
+					fi
+				else
+					#Ordre Decroissant
+					if [ "$extMotP" \< "$extMotD" ]
+					then
+						motP="$motD"
+						tmp="$tmp2"
+					fi
+				fi
+			fi
+			indD=`expr "$indD" + 1`
+		done
+
+		#On ajoute des \ a cote des / quand il y a des sous dossiers pour ne pas avoir d'erreur sur le sed	
+		ssRep=`nombreSousRep "$tmp"`
+		if [ "$ssRep" -gt 1 ]
+		then
+			newch=""
+			for i in $(seq 1 ${#tmp})
+			do
+				c=`echo "$tmp" | cut -c "$i"`
+				if [ $c == "/" ]
+				then
+					newch="$newch"\\"$c"
+				else
+					newch="$newch""$c"
+				fi
+			done
+			total=`echo "$total" | sed 's/'"$newch"';//'`
+		else
+			total=`echo "$total" | sed 's/'"$tmp"';//'`	
+		fi
+		
+		#On affiche l'element trie
+		echo "$tmp"
+		
+		indP=1
+		nbMots=`expr "$nbMots" - 1`
+	done
+}
+
 triSelonTaille () {
 	total="$1"
 	
@@ -652,6 +753,13 @@ function parametre (){
 				echo "n tri selon nom entree"
 		        chaineTriee=`triSimple "$chaine"`
 			fi
+
+			if [ $var == "-e" ]
+			then
+
+				echo "e tri selon extension entree"
+		        chaineTriee=`triSelonExtension "$chaine"`
+			fi
 			
 			for i in $(seq 1 ${#var})
 			do
@@ -676,6 +784,7 @@ function parametre (){
 						echo ""$opt" tri selon nombre de ligne"
 					elif [ "$opt" == "e" ]
 					then
+						chaineTriee=`triSelonExtension "$chaine"`
 						echo ""$opt" tri selon extension entree"
 					elif [ "$opt" == "t" ]
 					then
