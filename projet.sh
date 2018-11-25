@@ -79,14 +79,15 @@ creeChaineRecursive () {
 
 #Compte le nombre de fois ou il y a un ; -> pour savoir combien de fichier on a
 nombreFichier () {
-	echo "$1" | grep -o ";" | wc -l
+    t=`echo "$1" | grep -o ";" | wc -l`
+    echo "$t" | sed -e 's/[  ]*//g'
 }
 
 #Compte le nombre de fois ou il y a un / -> pour savoir combien de / on doit enlever pour avoir le nom du fichier
 nombreSousRep () {
 	t=`echo "$1" | grep -o "/" | wc -l`
 	t=`expr $t + 1`
-	echo "$t"
+	echo "$t" | sed -e 's/[  ]*//g'
 }
 
 #Indique, selon l'option, se que l'on doit faire en cas d'egalite
@@ -221,7 +222,6 @@ triSimple () {
 	#tmp pour stocker le fichier avec son chemin dans le cas ou l'option −R est choisi afin de l'enlever de la chaine totale
 	tmp=""
 	tmp2=""
-	
 	while [ "$nbMots" -ge "$indP" ]
 	do
 		#Indice du second element
@@ -469,7 +469,7 @@ triSelonNbLigne () {
 					then
 						motP="$motD"
 						tmp="$tmp2"
-						nbLigne1=$nbLigne2
+						nbLigne1="$nbLigne2"
 					elif [ "$nbLigne2" -eq "$nbLigne1" ]
 					then
 						equal=`casEgalite "$savePara1" "$savePara2"`
@@ -477,7 +477,7 @@ triSelonNbLigne () {
 						then
 							motP="$motD"
 							tmp="$tmp2"
-							nbLigne1=$nbLigne2
+							nbLigne1="$nbLigne2"
 						fi
 					fi
 				fi
@@ -512,6 +512,115 @@ triSelonNbLigne () {
 		nbMots=`expr "$nbMots" - 1`
 	done
 }
+
+triSelonDateDernModif () {
+	total="$1"
+	
+	#Pour afficher la chaine de base a trier
+	#echo $total
+	
+	nbMots=`nombreFichier "$total"`
+	#indice du premier element a comparer
+	indP=1
+	#tmp pour stocker le fichier avec son chemin dans le cas ou l'option −R est choisi afin de l'enlever de la chaine totale
+	tmp=""
+	tmp2=""
+	date1=0
+	date2=0
+	savePara1=""
+	savePara2=""
+	
+	while [ "$nbMots" -ge "$indP" ]
+	do
+		#Indice du second element
+		indD=`expr "$indP" + 1`
+		motP=`echo "$total" | cut -d';' -f$indP`
+		savePara1="$saveRepertoire""$motP"
+		date1=expr `date +%s` - `stat -c %Y "$savePara1"`
+		tmp="$motP"
+		
+		while [ "$nbMots" -ge "$indD" ]
+		do
+			motD=`echo "$total" | cut -d';' -f$indD`
+			savePara2="$saveRepertoire""$motD"
+			date2=expr `date +%s` - `stat -c %Y "$savePara2"`
+			tmp2="$motD"
+			
+			#Comparaison
+			if [ "$motD" != "" ]
+			then
+				if [ "$ordreDecroissant" -eq 0 ]
+				then
+					#Ordre Croissant
+					if [ "$date2" -lt "$date1" ]
+					then
+						motP="$motD"
+						tmp="$tmp2"
+						date1="$date2"
+						savePara1="$saveRepertoire""$motP"
+					elif [ "$date2" -eq "$date1" ]
+					then
+						equal=`casEgalite "$savePara1" "$savePara2"`				
+						if [ "$equal" == "KO" ]
+						then
+							motP="$motD"
+							tmp="$tmp2"
+							date1="$date2"
+							savePara1="$saveRepertoire""$motP"
+						fi
+					fi
+				else
+					#Ordre Decroissant
+					if [ "$date1" -lt "$date2" ]
+					then
+						motP="$motD"
+						tmp="$tmp2"
+						date1="$date2"
+						savePara1="$saveRepertoire""$motP"
+					elif [ "$date2" -eq "$date1" ]
+					then
+						equal=`casEgalite "$savePara1" "$savePara2"`
+						if [ "$equal" == "KO" ]
+						then
+							motP="$motD"
+							tmp="$tmp2"
+							date1="$date2"
+							savePara1="$saveRepertoire""$motP"
+						fi
+					fi
+				fi
+			fi
+			indD=`expr "$indD" + 1`
+		done
+		
+		#On ajoute des \ a cote des / quand il y a des sous dossiers pour ne pas avoir d'erreur sur le sed
+		ssRep=`nombreSousRep "$tmp"`
+		if [ "$ssRep" -gt 1 ]
+		then
+			newch=""
+			for i in $(seq 1 ${#tmp})
+			do
+				c=`echo "$tmp" | cut -c $i`
+				if [ $c == "/" ]
+				then
+					newch="$newch"\\"$c"
+				else
+					newch="$newch""$c"
+				fi
+			done
+			total=`echo "$total" | sed 's/'"$newch"';//'`
+		else
+			total=`echo "$total" | sed 's/'"$tmp"';//'`	
+		fi
+		
+		#On affiche l'element trie
+		echo "$tmp"
+		
+		indP=1
+		nbMots=`expr "$nbMots" - 1`
+	done
+}
+
 
 #Verification des parametres entres pour le tri
 function parametre (){
@@ -559,6 +668,7 @@ function parametre (){
 						echo ""$opt" tri selon taille entree"
 					elif [ "$opt" == "m" ]
 					then
+						chaineTriee=`triSelonDateDernModif "$chaine"`
 						echo ""$opt" tri selon date derniere modif"
 					elif [ "$opt" == "l" ]
 					then
