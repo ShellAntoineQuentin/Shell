@@ -237,13 +237,13 @@ function casEgalite () {
 					fi
 				elif [ "$opt" == "l" ]
 				then
-					if test -d "$para1"
+					if test ! -f "$para1"
 					then
 						nbLigne1=0
 					else
 						nbLigne1=`wc -l "$para1" | cut -d' ' -f1`
 					fi
-					if test -d "$para2"
+					if test ! -f "$para2"
 					then
 						nbLigne2=0
 					else
@@ -701,7 +701,7 @@ function triSelonNbLigne () {
 		indD=`expr "$indP" + 1`
 		motP=`echo "$total" | cut -d';' -f$indP`
 		savePara1="$saveRepertoire""$motP"
-		if test -d "$savePara1"
+		if test ! -f "$savePara1"
 		then
 			nbLigne1=0
 		else
@@ -713,7 +713,7 @@ function triSelonNbLigne () {
 		do
 			motD=`echo "$total" | cut -d';' -f$indD`
 			savePara2="$saveRepertoire""$motD"
-			if test -d "$savePara2"
+			if test ! -f "$savePara2"
 			then
 				nbLigne2=0
 			else
